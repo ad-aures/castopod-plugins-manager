@@ -1,0 +1,35 @@
+{
+  "name": "castopod-plugins-manager",
+  "version": "0.0.0-development.0",
+  "description": "A PHP library to install, update, and remove plugins on a Castopod instance.",
+  "private": true,
+  "author": {
+    "name": "Yassine Doghri",
+    "url": "https://yassinedoghri.com/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yassinedoghri/php-icons.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "prettier": "prettier --check .",
+    "prettier:fix": "prettier --write .",
+    "commit": "cz"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/exec": "^7.1.0",
+    "@semantic-release/git": "^10.0.1",
+    "commitizen": "^4.3.1",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
+    "cz-conventional-changelog": "^3.3.0",
+    "prettier": "^3.6.2",
+    "semantic-release": "^24.2.7"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}

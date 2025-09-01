@@ -1,0 +1,35 @@
+{
+  "name": "adaures/castopod-plugins-manager",
+  "description": "A PHP library to install, update, and remove plugins on a Castopod instance.",
+  "type": "library",
+  "license": "AGPL-3.0-only",
+  "autoload": {
+    "psr-4": {
+      "AdAures\\CastopodPluginsManager\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Yassine Doghri",
+      "homepage": "https://yassinedoghri.com/"
+    }
+  ],
+  "require": {
+    "php": ">=8.4"
+  },
+  "require-dev": {
+    "pestphp/pest": "^4.0.4",
+    "pestphp/pest-plugin-type-coverage": "^4.0.2",
+    "phpstan/extension-installer": "^1.4.3",
+    "phpstan/phpstan": "^2.1.22",
+    "rector/rector": "^2.1.4",
+    "symplify/coding-standard": "^12.4.3",
+    "symplify/easy-coding-standard": "^12.5.24"
+  },
+  "config": {
+    "allow-plugins": {
+      "pestphp/pest-plugin": true,
+      "phpstan/extension-installer": true
+    }
+  }
+}
