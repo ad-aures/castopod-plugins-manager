@@ -6,7 +6,10 @@
   "autoload": {
     "psr-4": {
       "AdAures\\CastopodPluginsManager\\": "src/"
-    }
+    },
+    "files": [
+      "src/helpers.php"
+    ]
   },
   "authors": [
     {
@@ -14,6 +17,31 @@
       "homepage": "https://yassinedoghri.com/"
     }
   ],
+  "scripts": {
+    "phpstan": "vendor/bin/phpstan analyse --ansi",
+    "rector": "vendor/bin/rector process --dry-run --ansi",
+    "rector:fix": "vendor/bin/rector process --ansi",
+    "style": "vendor/bin/ecs check --ansi",
+    "style:fix": "vendor/bin/ecs check --fix --ansi",
+    "pest": "./vendor/bin/pest --bail --colors=always",
+    "pest:parallel": "./vendor/bin/pest --colors=always --parallel",
+    "pest:profiling": "./vendor/bin/pest --colors=always --profile",
+    "pest:coverage": "./vendor/bin/pest --colors=always --parallel --coverage",
+    "pest:type-coverage": "./vendor/bin/pest --colors=always --type-coverage --min=95",
+    "test": [
+      "@style",
+      "@phpstan",
+      "@rector",
+      "@pest:type-coverage",
+      "@pest:parallel"
+    ],
+    "core:update": [
+      "composer update --no-interaction --prefer-stable",
+      "composer bump --ansi",
+      "composer validate --strict --ansi",
+      "composer audit --ansi"
+    ]
+  },
   "require": {
     "php": ">=8.4"
   },
