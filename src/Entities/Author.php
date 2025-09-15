@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AdAures\CastopodPluginsManager\Entities;
+namespace Castopod\PluginsManager\Entities;
 
 readonly class Author
 {

@@ -5,7 +5,7 @@
   "license": "AGPL-3.0-only",
   "autoload": {
     "psr-4": {
-      "AdAures\\CastopodPluginsManager\\": "src/"
+      "Castopod\\PluginsManager\\": "src/"
     },
     "files": [
       "src/helpers.php"
@@ -43,7 +43,8 @@
     ]
   },
   "require": {
-    "php": ">=8.4"
+    "php": ">=8.4",
+    "z4kn4fein/php-semver": "^3.0"
   },
   "require-dev": {
     "pestphp/pest": "^4.0.4",

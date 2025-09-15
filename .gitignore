@@ -4,3 +4,10 @@ vendor/
 node_modules/
 
 coverage.xml
+
+# Local testing
+temp/
+tmp/
+plugins/
+plugins-lock.json
+plugins.txt

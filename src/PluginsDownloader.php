@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+namespace Castopod\PluginsManager;
+
+use Exception;
+
 class PluginsDownloader
 {
     /**
@@ -9,8 +13,12 @@ class PluginsDownloader
      */
     public private(set) array $tempDirPaths = [];
 
+    /**
+     * @var array<string,string>
+     */
+    public private(set) array $tempPluginPaths = [];
+
     public function __construct(
-        public private(set) string $pluginsFolder,
         public ?string $tempDirectory = null,
     ) {
     }
@@ -20,8 +28,7 @@ class PluginsDownloader
         string $repositoryUrl,
         string $subfolder,
         string $commitHash,
-        bool $copyToPluginFolder = true,
-    ): void {
+    ): bool {
         // create temp folder where repo is to be cloned
         $tempDirPath = tempdir('castopod-plugin_', $this->tempDirectory);
 
@@ -31,7 +38,8 @@ class PluginsDownloader
 
         $tempPluginDirPath = sprintf('%s%s', $tempDirPath, $subfolder === '' ? '' : '/' . $subfolder);
 
-        // add tempDirPath to
+        // add tempDirPath
+        $this->tempPluginPaths[$pluginKey] = $tempPluginDirPath;
         $this->tempDirPaths[] = $tempDirPath;
 
         // clone repository
@@ -45,11 +53,14 @@ class PluginsDownloader
         }
 
         // get default branch
-        $defaultBranch = $this->runCommand(sprintf('cd %s && git branch --show-current', $tempDirPath), true);
+        $defaultBranch = $this->runCommand(sprintf('cd %s && git branch --show-current', $tempDirPath), false);
+
 
         if ($defaultBranch === []) {
             throw new Exception('Could not get default branch.');
         }
+
+        var_dump('HELLO');
 
         // clean default branch output
         $defaultBranch = $defaultBranch[0];
@@ -60,15 +71,20 @@ class PluginsDownloader
         // switch to the commit hash / version to download
         $this->runCommand(sprintf('cd %s && git switch --detach %s', $tempDirPath, $commitHash));
 
-        // first make sure target folder exists
-        $pluginFolder = sprintf('%s/%s', $this->pluginsFolder, $pluginKey);
-        if (! file_exists($pluginFolder)) {
-            mkdir($pluginFolder, 0777, true);
-        }
+        return true;
+    }
 
-        if ($copyToPluginFolder) {
-            // copy temp plugin folder to final plugin folder
-            xcopy($tempPluginDirPath, $pluginFolder);
+    public function copyToDestination(string $destination): void
+    {
+        foreach ($this->tempPluginPaths as $pluginKey => $tempPluginPath) {
+            $pluginDir = $destination . DIRECTORY_SEPARATOR . $pluginKey;
+            
+            // make sure plugin folder exists
+            if (! is_dir($pluginDir)) {
+                mkdir($pluginDir, 0777, true);
+            }
+
+            xcopy($tempPluginPath, $pluginDir);
         }
     }
 
@@ -85,7 +101,7 @@ class PluginsDownloader
     /**
      * @return array<string> output
      */
-    private function runCommand(string $command, bool $hideOutput = true): array
+    private function runCommand(string $command, bool $hideOutput = false): array
     {
         if ($hideOutput) {
             $command = ' 2>/dev/null';
