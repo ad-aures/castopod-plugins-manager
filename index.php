@@ -34,7 +34,6 @@ $pluginsManager->writeMetadata();
 
 // $version = $pluginsRepositoryClient->getVersion('ad-aures/podcast-license', 'azdd');
 
-
 // $pluginsDownloader = new PluginsDownloader('./plugins', $version->plugin->manifest_root);
 // $pluginsDownloader->download(
 //     $version->plugin->key,

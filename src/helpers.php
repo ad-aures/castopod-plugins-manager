@@ -101,7 +101,7 @@ if (! function_exists('removeDir')) {
      *
      * @link from https://stackoverflow.com/a/3349792
      */
-    function removeDir(string $dir): void
+    function removeDir(string $dir): bool
     {
         $iterator = new RecursiveDirectoryIterator($dir, RecursiveDirectoryIterator::SKIP_DOTS);
         $files = new RecursiveIteratorIterator($iterator, RecursiveIteratorIterator::CHILD_FIRST);
@@ -109,12 +109,13 @@ if (! function_exists('removeDir')) {
         /** @var SplFileInfo $file */
         foreach ($files as $file) {
             if ($file->isDir()) {
-                rmdir($file->getPathname());
-            } else {
-                unlink($file->getPathname());
+                if (! rmdir($file->getPathname())) {
+                    return false;
+                }
+            } elseif (! unlink($file->getPathname())) {
+                return false;
             }
         }
-
-        rmdir($dir);
+        return rmdir($dir);
     }
 }

@@ -18,6 +18,6 @@ readonly class Author
      */
     public static function fromJson(array $data): self
     {
-        return new self($data['name'], $data['email'], $data['url']);
+        return new self($data['name'], $data['email'] ?? null, $data['url'] ?? null);
     }
 }

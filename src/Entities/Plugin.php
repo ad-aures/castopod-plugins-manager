@@ -41,7 +41,7 @@ readonly class Plugin
             $data['description'],
             $data['repository_url'],
             $data['manifest_root'],
-            $data['homepage_url'],
+            $data['homepage_url'] ?? null,
             $data['categories'],
             $authors,
             new DateTimeImmutable($data['created_at']),

@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace Castopod\PluginsManager;
 
+use Castopod\PluginsManager\Entities\JsonFile;
 use Castopod\PluginsManager\Entities\Lockfile;
 use Castopod\PluginsManager\Entities\LockfilePlugin;
-use Castopod\PluginsManager\Entities\TxtFile;
 use Castopod\PluginsManager\Entities\Version;
-use Exception;
+use Castopod\PluginsManager\Entities\VersionList;
+use Castopod\PluginsManager\Logger\PluginsManagerLogger;
 use z4kn4fein\SemVer\Constraints\Constraint as SemverConstraint;
 use z4kn4fein\SemVer\Version as Semver;
 
 class PluginsManager
 {
-    public private(set) TxtFile $pluginsTxtFile;
+    public private(set) JsonFile $pluginsJsonFile;
 
     public private(set) Lockfile $pluginsLockfile;
 
@@ -30,26 +31,84 @@ class PluginsManager
         string $pluginsDirPath,
         ?string $tempDirPath = null,
     ) {
+        PluginsManagerLogger::info('start', 'Castopod Plugins Manager is starting.');
+
         $pluginsTxtRoot = rtrim($pluginsTxtRoot, '/');
 
-        $this->pluginsTxtFile = new TxtFile($pluginsTxtRoot . DIRECTORY_SEPARATOR . 'plugins.txt');
+        $this->pluginsJsonFile = new JsonFile($pluginsTxtRoot . DIRECTORY_SEPARATOR . 'plugins.json');
         $this->pluginsLockfile = new Lockfile($pluginsTxtRoot . DIRECTORY_SEPARATOR . 'plugins-lock.json');
 
         // first, make sure plugins and temp directories exist, create them otherwise
         $this->pluginsDirPath = rtrim($pluginsDirPath, '/');
         if (! file_exists($this->pluginsDirPath)) {
-            mkdir($this->pluginsDirPath, 0777, true);
+            PluginsManagerLogger::info('construct.createPluginsDir', 'Plugins directory does not exist, creating it.', [
+                'pluginsDirPath' => $this->pluginsDirPath,
+            ]);
+
+            if (! mkdir($this->pluginsDirPath, 0777, true)) {
+                PluginsManagerLogger::error('construct.createPluginsDirError', 'Could not create plugins folder.', [
+                    'pluginsDirPath' => $this->pluginsDirPath,
+                ]);
+            } else {
+                PluginsManagerLogger::success(
+                    'construct.createPluginsDirSuccess',
+                    'Plugins directory has been created.',
+                    [
+                        'pluginsDirPath' => $this->pluginsDirPath,
+
+                    ],
+                );
+            }
         }
 
         if ($tempDirPath !== null) {
-            $this->tempDirPath = $tempDirPath === null ? null : rtrim($tempDirPath, '/');
+            $this->tempDirPath = rtrim($tempDirPath, '/');
 
             if (! file_exists($this->tempDirPath)) {
-                mkdir($this->tempDirPath, 0777, true);
+                PluginsManagerLogger::info('construct.createTempDir', 'Temp directory does not exist, creating it.', [
+                    'tempDirPath' => $this->tempDirPath,
+                ]);
+
+                if (! mkdir($this->tempDirPath, 0777, true)) {
+                    PluginsManagerLogger::error('construct.createTempDirError', 'Could not create temp folder.', [
+                        'tempDirPath' => $this->tempDirPath,
+                    ]);
+                } else {
+                    PluginsManagerLogger::success(
+                        'construct.createTempDirSuccess',
+                        'Temp directory has been created.',
+                        [
+                            'tempDirPath' => $this->tempDirPath,
+                        ],
+                    );
+                }
             }
         }
 
         $this->pluginsRepositoryClient = new PluginsRepositoryClient($repositoryUrl);
+    }
+
+    public function __destruct()
+    {
+        // make sure plugins.json and plugins-lock.json files are up to date
+
+        if ($this->pluginsJsonFile->hasChanged) {
+            PluginsManagerLogger::info('destruct.saveJsonFile', 'Saving state to plugins.json file.');
+
+            $this->pluginsJsonFile->write();
+
+            PluginsManagerLogger::success('destruct.endSaveJsonFile', 'Saved state to plugins.json files.');
+        }
+
+        if ($this->pluginsLockfile->hasChanged) {
+            PluginsManagerLogger::info('destruct.saveLockFile', 'Saving state to plugins-lock.json file.');
+
+            $this->pluginsLockfile->write();
+
+            PluginsManagerLogger::success('destruct.endSaveLockFile', 'Saved state to plugins-lock.json file.');
+        }
+
+        PluginsManagerLogger::info('end', 'Castopod Plugins Manager is done.');
     }
 
     /**
@@ -58,17 +117,23 @@ class PluginsManager
     public function install(array $plugins = [], bool $addToTxtFile = true): void
     {
         if ($plugins === []) {
-            $this->error('Nothing to install');
+            PluginsManagerLogger::warning('install.nothingToInstall', 'Nothing to install');
+            return;
         }
 
         foreach ($plugins as $pluginKey => $version) {
-            $this->add($pluginKey, $version['constraint'], $addToTxtFile);
+            $this->add($pluginKey, $version, $addToTxtFile);
         }
     }
 
     public function installFromPluginsTxt(): void
     {
-        $this->install($this->pluginsTxtFile->plugins, false);
+        $plugins = [];
+        foreach ($this->pluginsJsonFile->plugins as $pluginKey => $version) {
+            $plugins[$pluginKey] = $version['constraint'];
+        }
+
+        $this->install($plugins, false);
     }
 
     /**
@@ -76,11 +141,21 @@ class PluginsManager
      *
      * @param null|string|Version $versionOrConstraint Specific version or constraint (eg. ^1.0.0)
      */
-    public function add(string $pluginKey, ?string $versionOrConstraint = null, bool $addToTxtFile = true): void
+    public function add(string $pluginKey, mixed $versionOrConstraint = null, bool $addToTxtFile = true): void
     {
-        $version = $versionOrConstraint;
-        if (! $version instanceof Version) {
+        PluginsManagerLogger::info('add.start', 'Adding plugin.', [
+            'pluginKey'  => $pluginKey,
+            'constraint' => $versionOrConstraint === null ? null : (string) $versionOrConstraint,
+        ]);
+
+        if (! $versionOrConstraint instanceof Version) {
             $version = $this->getSatisfiedVersion($pluginKey, $versionOrConstraint);
+        } else {
+            $version = $versionOrConstraint;
+        }
+
+        if (! $version instanceof Version) {
+            return;
         }
 
         // download plugin
@@ -93,18 +168,23 @@ class PluginsManager
             $version->commit_hash,
         );
 
-        $pluginsDownloader->copyToDestination($this->pluginsDirPath);
+        $pluginsDownloader->copyTempPluginToDestination($this->pluginsDirPath);
         $pluginsDownloader->removeTempFolders();
 
         // trigger download increment to API
         $this->pluginsRepositoryClient->incrementDownload($pluginKey, $version->tag);
 
         if ($addToTxtFile) {
-            $this->pluginsTxtFile->addPlugin($pluginKey, $version->tag);
+            $this->pluginsJsonFile->addPlugin($pluginKey, $version->tag);
         }
 
         // add plugin to lockfile
         $this->pluginsLockfile->addPlugin($pluginKey, $version);
+
+        PluginsManagerLogger::success('add.end', 'Plugin installed.', [
+            'pluginKey' => $pluginKey,
+            'version'   => (string) $version,
+        ]);
     }
 
     /**
@@ -112,64 +192,86 @@ class PluginsManager
      */
     public function update(string $pluginKey): void
     {
+        PluginsManagerLogger::info('update.start', 'Updating plugin.', [
+            'pluginKey' => $pluginKey,
+        ]);
+
         // grab version or constraint from pluginTxt file
-        $pluginConstraint = $this->pluginsTxtFile->getPluginConstraint($pluginKey);
+        $pluginConstraint = $this->pluginsJsonFile->getPluginConstraint($pluginKey);
 
         if ($pluginConstraint === null) {
-            throw new Exception(sprintf("Could not find plugin %s in plugin.txt file. Have you added it?", $pluginKey));
+            PluginsManagerLogger::error(
+                'update.pluginNotFound',
+                sprintf('Could not find plugin in %s file. Have you added it?', $this->pluginsJsonFile->filePath),
+                [
+                    'pluginKey' => $pluginKey,
+
+                ],
+            );
+            return;
         }
 
         $satisfiedVersion = $this->getSatisfiedVersion($pluginKey, $pluginConstraint['constraint']);
 
+        if (! $satisfiedVersion instanceof Version) {
+            return;
+        }
+
         $lockfilePlugin = $this->pluginsLockfile->getPlugin($pluginKey);
-        if ($lockfilePlugin instanceof LockfilePlugin) {
-            if (
+        if (
+            $lockfilePlugin instanceof LockfilePlugin
+            && (
                 $satisfiedVersion->tag === $lockfilePlugin->version
                 && $satisfiedVersion->commit_hash === $lockfilePlugin->source['reference']
-            ) {
-                throw new Exception("Plugin is already up to date!");
-            }
+            )
+        ) {
+            PluginsManagerLogger::warning('update.alreadyUpToDate', 'Plugin is already up to date.', [
+                'pluginKey' => $pluginKey,
+            ]);
+            return;
         }
 
         // update to latest version, remove old version first
         $this->remove($pluginKey);
         $this->add($pluginKey, $satisfiedVersion->tag, false);
+
+        PluginsManagerLogger::success('update.end', 'Plugin was updated.', [
+            'pluginKey' => $pluginKey,
+            'version'   => $satisfiedVersion->tag,
+        ]);
     }
 
-    public function remove(string $pluginKey): bool
+    public function remove(string $pluginKey): void
     {
+        PluginsManagerLogger::info('remove.start', 'Removing plugin.', [
+            'pluginKey' => $pluginKey,
+        ]);
+
         // check that plugin is already installed
-        $pluginFolder = $this->getPluginFolderPath($pluginKey);
-        if (! file_exists($pluginFolder)) {
-            // nothing do remove
-            return false;
+        $pluginDir = $this->pluginsDirPath . DIRECTORY_SEPARATOR . $pluginKey;
+        if (! file_exists($pluginDir)) {
+            PluginsManagerLogger::warning('remove.nothingToRemove', 'Nothing to remove.', [
+                'pluginKey' => $pluginKey,
+            ]);
+            return;
         }
 
-        removeDir($pluginFolder);
+        if (! removeDir($pluginDir)) {
+            PluginsManagerLogger::error('remove.removeDirError', 'Could not remove plugin directory.', [
+                'pluginKey' => $pluginKey,
+                'pluginDir' => $pluginDir,
+            ]);
+        }
 
-        $this->pluginsTxtFile->removePlugin($pluginKey);
+        $this->pluginsJsonFile->removePlugin($pluginKey);
         $this->pluginsLockfile->removePlugin($pluginKey);
 
-        return true;
+        PluginsManagerLogger::success('remove.end', 'Plugin removed.', [
+            'pluginKey' => $pluginKey,
+        ]);
     }
 
-    public function writeMetadata(): void
-    {
-        $this->pluginsTxtFile->write();
-        $this->pluginsLockfile->write();
-    }
-
-    private function getPluginFolderPath(string $pluginKey): string
-    {
-        return $this->pluginsDirPath . DIRECTORY_SEPARATOR . $pluginKey;
-    }
-
-    private function error(string $message): void
-    {
-        throw new Exception($message);
-    }
-
-    private function getSatisfiedVersion(string $pluginKey, ?string $versionOrConstraint = null): Version
+    private function getSatisfiedVersion(string $pluginKey, ?string $versionOrConstraint = null): ?Version
     {
         if (
             $versionOrConstraint === null
@@ -182,18 +284,27 @@ class PluginsManager
         $constraint = SemverConstraint::parseOrNull($versionOrConstraint);
 
         if (! $constraint instanceof SemverConstraint) {
-            throw new Exception(sprintf('Invalid version or constraint: %s', $versionOrConstraint));
+            PluginsManagerLogger::error('getSatisfiedVersion.invalidConstraint', 'Invalid version or constraint', [
+                'pluginKey'           => $pluginKey,
+                'versionOrConstraint' => $versionOrConstraint,
+            ]);
+
+            return null;
         }
 
         // get version list for plugin
         $versionList = $this->pluginsRepositoryClient->getVersionList($pluginKey);
+
+        if (! $versionList instanceof VersionList) {
+            return null;
+        }
 
         // parse all versions tags, invalid "dev-*" version will be parsed to null
         $versions = array_map(fn (string $version) => Semver::parseOrNull($version), $versionList->all_tags);
 
         // remove "dev-*" versions set to null during parse
         /** @var Semver[] $versions */
-        $versions = array_filter($versions, static fn (?Semver $semver) => $semver !== null);
+        $versions = array_filter($versions, static fn (?Semver $semver) => $semver instanceof Semver);
 
         // sort versions from highest to lowest
         $sortedVersions = Semver::rsort($versions);
@@ -205,6 +316,10 @@ class PluginsManager
             }
         }
 
-        throw new Exception(sprintf('No version satisfies constraint %s', $versionOrConstraint));
+        PluginsManagerLogger::error('getSatisfiedVersion.noVersionForConstraint', 'No version satisfies constraint.', [
+            'pluginKey'           => $pluginKey,
+            'versionOrConstraint' => $versionOrConstraint,
+        ]);
+        return null;
     }
 }

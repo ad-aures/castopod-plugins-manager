@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Castopod\PluginsManager;
 
-use Exception;
+use Castopod\PluginsManager\Logger\PluginsManagerLogger;
 
 class PluginsDownloader
 {
@@ -29,11 +29,19 @@ class PluginsDownloader
         string $subfolder,
         string $commitHash,
     ): bool {
+        PluginsManagerLogger::info('download.start', 'Downloading plugin from repository', [
+            'pluginKey'  => $pluginKey,
+            'repository' => $repositoryUrl,
+            'subfolder'  => $subfolder,
+            'commitHash' => $commitHash,
+        ]);
+
         // create temp folder where repo is to be cloned
         $tempDirPath = tempdir('castopod-plugin_', $this->tempDirectory);
 
         if (! $tempDirPath) {
-            throw new Exception(sprintf('Couldn\'t create temp directory for plugin %s', $pluginKey));
+            PluginsManagerLogger::error('download.tempDirError', 'Couldn\'t create temp directory for plugin.');
+            return false;
         }
 
         $tempPluginDirPath = sprintf('%s%s', $tempDirPath, $subfolder === '' ? '' : '/' . $subfolder);
@@ -55,12 +63,13 @@ class PluginsDownloader
         // get default branch
         $defaultBranch = $this->runCommand(sprintf('cd %s && git branch --show-current', $tempDirPath), false);
 
-
         if ($defaultBranch === []) {
-            throw new Exception('Could not get default branch.');
+            PluginsManagerLogger::error(
+                'download.defaultBranchError',
+                'Download failed. Could not get default branch.',
+            );
+            return false;
         }
-
-        var_dump('HELLO');
 
         // clean default branch output
         $defaultBranch = $defaultBranch[0];
@@ -71,20 +80,53 @@ class PluginsDownloader
         // switch to the commit hash / version to download
         $this->runCommand(sprintf('cd %s && git switch --detach %s', $tempDirPath, $commitHash));
 
+        PluginsManagerLogger::success('download.end', 'Plugin downloaded.', [
+            'pluginKey'         => $pluginKey,
+            'repository'        => $repositoryUrl,
+            'subfolder'         => $subfolder,
+            'commitHash'        => $commitHash,
+            'tempPluginDirPath' => $tempPluginDirPath,
+        ]);
+
         return true;
     }
 
-    public function copyToDestination(string $destination): void
+    public function copyTempPluginToDestination(string $destination): void
     {
         foreach ($this->tempPluginPaths as $pluginKey => $tempPluginPath) {
+            PluginsManagerLogger::info('copyTempPluginToDestination.start', 'Copying plugin to destination', [
+                'pluginKey'      => $pluginKey,
+                'tempPluginPath' => $tempPluginPath,
+                'destination'    => $destination,
+            ]);
+
             $pluginDir = $destination . DIRECTORY_SEPARATOR . $pluginKey;
-            
+
             // make sure plugin folder exists
             if (! is_dir($pluginDir)) {
                 mkdir($pluginDir, 0777, true);
             }
 
-            xcopy($tempPluginPath, $pluginDir);
+            if (! xcopy($tempPluginPath, $pluginDir)) {
+                PluginsManagerLogger::error(
+                    'copyTempPluginToDestination.copyError',
+                    'Could not copy plugin to destination.',
+                    [
+                        'pluginKey'      => $pluginKey,
+                        'tempPluginPath' => $tempPluginPath,
+                        'destination'    => $destination,
+
+                    ],
+                );
+
+                continue;
+            }
+
+            PluginsManagerLogger::success('copyTempPluginToDestination.end', 'Plugin copied to destination', [
+                'pluginKey'      => $pluginKey,
+                'tempPluginPath' => $tempPluginPath,
+                'destination'    => $destination,
+            ]);
         }
     }
 
@@ -94,17 +136,29 @@ class PluginsDownloader
     public function removeTempFolders(): void
     {
         foreach ($this->tempDirPaths as $tempDirPath) {
-            removeDir($tempDirPath);
+            PluginsManagerLogger::info('removeTempFolder.start', 'Removing temp directory', [
+                'tempDirPath' => $tempDirPath,
+            ]);
+
+            if (! removeDir($tempDirPath)) {
+                PluginsManagerLogger::error('removeTempFolder.removeDirError', 'Could not remove temp directory.', [
+                    'tempDirPath' => $tempDirPath,
+                ]);
+            }
+
+            PluginsManagerLogger::success('removeTempFolder.end', 'Removed temp directory.', [
+                'tempDirPath' => $tempDirPath,
+            ]);
         }
     }
 
     /**
      * @return array<string> output
      */
-    private function runCommand(string $command, bool $hideOutput = false): array
+    private function runCommand(string $command, bool $hideOutput = true): array
     {
         if ($hideOutput) {
-            $command = ' 2>/dev/null';
+            $command .= ' 2>/dev/null';
         }
 
         exec($command, $output);

@@ -7,5 +7,4 @@ services:
       - ../..:/workspaces:cached
     ports:
       - 8000:8000
-    network_mode: "host"
     command: sleep infinity

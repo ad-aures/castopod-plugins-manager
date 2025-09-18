@@ -18,7 +18,7 @@
     }
   ],
   "scripts": {
-    "phpstan": "vendor/bin/phpstan analyse --ansi",
+    "phpstan": "vendor/bin/phpstan analyse --ansi --memory-limit 512M",
     "rector": "vendor/bin/rector process --dry-run --ansi",
     "rector:fix": "vendor/bin/rector process --ansi",
     "style": "vendor/bin/ecs check --ansi",

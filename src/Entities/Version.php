@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Castopod\PluginsManager\Entities;
 
 use DateTimeImmutable;
+use Stringable;
 
-readonly class Version
+readonly class Version implements Stringable
 {
     /**
      * @param list<string> $hooks
@@ -23,6 +24,11 @@ readonly class Version
         public private(set) int $file_count,
         public private(set) DateTimeImmutable $published_at,
     ) {
+    }
+
+    public function __toString(): string
+    {
+        return $this->tag;
     }
 
     /**
