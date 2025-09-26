@@ -27,16 +27,16 @@ class PluginsManager
 
     public function __construct(
         string $repositoryUrl,
-        string $pluginsTxtRoot,
+        string $pluginsJsonRoot,
         string $pluginsDirPath,
         ?string $tempDirPath = null,
     ) {
         PluginsManagerLogger::info('start', 'Castopod Plugins Manager is starting.');
 
-        $pluginsTxtRoot = rtrim($pluginsTxtRoot, '/');
+        $pluginsJsonRoot = rtrim($pluginsJsonRoot, '/');
 
-        $this->pluginsJsonFile = new JsonFile($pluginsTxtRoot . DIRECTORY_SEPARATOR . 'plugins.json');
-        $this->pluginsLockfile = new Lockfile($pluginsTxtRoot . DIRECTORY_SEPARATOR . 'plugins-lock.json');
+        $this->pluginsJsonFile = new JsonFile($pluginsJsonRoot . DIRECTORY_SEPARATOR . 'plugins.json');
+        $this->pluginsLockfile = new Lockfile($pluginsJsonRoot . DIRECTORY_SEPARATOR . 'plugins-lock.json');
 
         // first, make sure plugins and temp directories exist, create them otherwise
         $this->pluginsDirPath = rtrim($pluginsDirPath, '/');
@@ -161,15 +161,10 @@ class PluginsManager
         // download plugin
         $pluginsDownloader = new PluginsDownloader($this->tempDirPath);
 
-        $pluginsDownloader->download(
-            $pluginKey,
-            $version->plugin->repository_url,
-            $version->plugin->manifest_root,
-            $version->commit_hash,
-        );
+        $pluginsDownloader->download($version);
 
         $pluginsDownloader->copyTempPluginToDestination($this->pluginsDirPath);
-        $pluginsDownloader->removeTempFolders();
+        $pluginsDownloader->clearTemp();
 
         // trigger download increment to API
         $this->pluginsRepositoryClient->incrementDownload($pluginKey, $version->tag);

@@ -34,7 +34,7 @@ class PluginsManagerLogger
     private static array $info = [];
 
     /**
-     * @param array<string,string|null> $context
+     * @param array<string,string|int|null> $context
      */
     public static function error(string $code, string $message, array $context = []): void
     {
@@ -42,7 +42,7 @@ class PluginsManagerLogger
     }
 
     /**
-     * @param array<string,string|null> $context
+     * @param array<string,string|int|null> $context
      */
     public static function warning(string $code, string $message, array $context = []): void
     {
@@ -50,7 +50,7 @@ class PluginsManagerLogger
     }
 
     /**
-     * @param array<string,string|null> $context
+     * @param array<string,string|int|null> $context
      */
     public static function info(string $code, string $message, array $context = []): void
     {
@@ -58,7 +58,7 @@ class PluginsManagerLogger
     }
 
     /**
-     * @param array<string,string|null> $context
+     * @param array<string,string|int|null> $context
      */
     public static function success(string $code, string $message, array $context = []): void
     {
@@ -66,7 +66,7 @@ class PluginsManagerLogger
     }
 
     /**
-     * @param array<string,string|null> $context
+     * @param array<string,string|int|null> $context
      */
     public static function log(
         string $code,

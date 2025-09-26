@@ -22,6 +22,8 @@ readonly class Version implements Stringable
         public private(set) array $hooks,
         public private(set) int $size,
         public private(set) int $file_count,
+        public private(set) string $archive_url,
+        public private(set) string $archive_checksum,
         public private(set) DateTimeImmutable $published_at,
     ) {
     }
@@ -48,6 +50,8 @@ readonly class Version implements Stringable
             $data['hooks'],
             $data['size'],
             $data['file_count'],
+            $data['archive_url'],
+            $data['archive_checksum'],
             new DateTimeImmutable($data['published_at']),
         );
     }

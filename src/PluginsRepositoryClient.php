@@ -124,6 +124,11 @@ class PluginsRepositoryClient
         $ch = curl_init($this->apiBaseURL . sprintf('/%s/v/%s/downloads', $pluginKey, $pluginVersion));
 
         curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt(
+            $ch,
+            CURLOPT_HTTPHEADER,
+            ['User-Agent: CastopodPluginsManager/' . CPM_VERSION, 'Accept: application/json'],
+        );
 
         /** @var bool $response */
         $response = curl_exec($ch);
@@ -165,6 +170,11 @@ class PluginsRepositoryClient
         curl_setopt($ch, CURLOPT_URL, $url);
         // return the response from the server as a string instead of outputting it directly
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt(
+            $ch,
+            CURLOPT_HTTPHEADER,
+            ['User-Agent: CastopodPluginsManager/' . CPM_VERSION, 'Accept: application/json'],
+        );
 
         $response = curl_exec($ch);
 

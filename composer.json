@@ -8,6 +8,7 @@
       "Castopod\\PluginsManager\\": "src/"
     },
     "files": [
+      "src/Constants.php",
       "src/helpers.php"
     ]
   },

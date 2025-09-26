@@ -33,6 +33,9 @@ class Lockfile
         $lockfilePlugin = new LockfilePlugin($version->tag, [
             'url'       => $version->plugin->repository_url,
             'reference' => $version->commit_hash,
+        ], [
+            'url'      => $version->archive_url,
+            'checksum' => $version->archive_checksum,
         ]);
 
         if (array_key_exists($pluginKey, $this->plugins) && $this->plugins[$pluginKey] === $lockfilePlugin) {
@@ -64,7 +67,27 @@ class Lockfile
         ]);
     }
 
-    public function read(): void
+    public function write(): void
+    {
+        PluginsManagerLogger::info('lockFile.writeStart', 'Writing to plugins-lock.json file.');
+
+        // sort plugins by key to ease comparison
+        ksort($this->plugins);
+
+        $result = file_put_contents($this->filePath, json_encode([
+            'version' => $this->version,
+            'plugins' => $this->plugins,
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+
+        if ($result === false) {
+            PluginsManagerLogger::error('lockFile.writeError', 'Could not write to plugins-lock.json file.');
+            return;
+        }
+
+        PluginsManagerLogger::info('lockFile.writeEnd', 'Finished writing to plugins-lock.json file.');
+    }
+
+    private function read(): void
     {
         PluginsManagerLogger::info('lockFile.readStart', 'Reading plugins-lock.json file.');
 
@@ -92,22 +115,5 @@ class Lockfile
         }
 
         PluginsManagerLogger::info('lockFile.readEnd', 'Finished reading plugins-lock.json file.');
-    }
-
-    public function write(): void
-    {
-        PluginsManagerLogger::info('lockFile.writeStart', 'Writing to plugins-lock.json file.');
-
-        $result = file_put_contents($this->filePath, (string) json_encode([
-            'version' => $this->version,
-            'plugins' => $this->plugins,
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
-
-        if ($result === false) {
-            PluginsManagerLogger::error('lockFile.writeError', 'Could not write to plugins-lock.json file.');
-            return;
-        }
-
-        PluginsManagerLogger::info('lockFile.writeEnd', 'Finished writing to plugins-lock.json file.');
     }
 }

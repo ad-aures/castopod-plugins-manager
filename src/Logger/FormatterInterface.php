@@ -7,7 +7,7 @@ namespace Castopod\PluginsManager\Logger;
 interface FormatterInterface
 {
     /**
-     * @param array{code:string,message:string,context:array<string,string|null>} $log
+     * @param array{code:string,message:string,context:array<string,string|int|null>} $log
      */
     public function format(LogLevel $level, array $log): void;
 }

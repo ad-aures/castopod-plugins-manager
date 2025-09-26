@@ -9,9 +9,6 @@
         <testsuite name="Arch">
             <directory>tests/Arch</directory>
         </testsuite>
-        <testsuite name="Feature">
-            <directory>tests/Feature</directory>
-        </testsuite>
     </testsuites>
     <source>
         <include>

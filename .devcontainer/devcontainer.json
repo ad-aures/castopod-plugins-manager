@@ -10,7 +10,10 @@
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/node:1": {},
-    "ghcr.io/guiyomh/features/vim:0": {}
+    "ghcr.io/guiyomh/features/vim:0": {},
+    "ghcr.io/opencodeco/devcontainers/install-php-extensions": {
+      "extensions": "zip"
+    }
   },
   // Configure tool-specific properties.
   "customizations": {

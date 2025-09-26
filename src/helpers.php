@@ -119,3 +119,44 @@ if (! function_exists('removeDir')) {
         return rmdir($dir);
     }
 }
+
+if (! function_exists('get_directory_metadata')) {
+    /**
+     * Calculates directory size, file count, and checksum of a directory
+     *
+     * @return array{0:int,1:int,2:string}
+     */
+    function get_directory_metadata(string $path): array
+    {
+        $path = (string) realpath($path);
+        if ($path === '' || ! file_exists($path)) {
+            throw new Exception(sprintf('Could not get metadata of directory %s', $path));
+        }
+
+        $iterator = new RecursiveDirectoryIterator($path, RecursiveDirectoryIterator::SKIP_DOTS);
+        $files = new RecursiveIteratorIterator($iterator, RecursiveIteratorIterator::CHILD_FIRST);
+
+        $fileList = [];
+        $bytesTotal = 0;
+        $fileCount = 0;
+        /** @var \SplFileObject $file */
+        foreach ($files as $file) {
+            if ($file->isFile()) {
+                $filePath = $file->getPathname();
+                $filename = preg_replace('/^' . preg_quote($path, '/') . '/', '', $filePath);
+
+                $fileList[] = $filename . ':' . hash_file('sha256', $filePath);
+
+                $bytesTotal += $file->getSize();
+                $fileCount++;
+            }
+        }
+
+        // Ensure file list order is always the same
+        sort($fileList);
+
+        $checksum = hash('sha256', implode('|', $fileList));
+
+        return [$bytesTotal, $fileCount, $checksum];
+    }
+}

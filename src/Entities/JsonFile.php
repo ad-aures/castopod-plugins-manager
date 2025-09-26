@@ -78,10 +78,13 @@ class JsonFile
             $plugins[$pluginKey] = $version['constraint'];
         }
 
-        $result = file_put_contents($this->filePath, (string) json_encode([
+        // sort plugins by key to ease comparison
+        ksort($plugins);
+
+        $result = file_put_contents($this->filePath, json_encode([
             'plugins'      => $plugins,
             'repositories' => $this->repositories,
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
 
         if ($result === false) {
             PluginsManagerLogger::error('jsonFile.writeError', 'Could not write plugins.json file.');

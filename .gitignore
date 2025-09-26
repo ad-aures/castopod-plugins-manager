@@ -10,4 +10,4 @@ temp/
 tmp/
 plugins/
 plugins-lock.json
-plugins.txt
+plugins.json
