@@ -32,6 +32,7 @@ class Lockfile
     {
         $lockfilePlugin = new LockfilePlugin($version->tag, [
             'url'       => $version->plugin->repository_url,
+            'path'      => $version->plugin->manifest_root,
             'reference' => $version->commit_hash,
         ], [
             'url'      => $version->archive_url,

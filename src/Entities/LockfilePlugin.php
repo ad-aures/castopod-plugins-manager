@@ -34,7 +34,11 @@ readonly class LockfilePlugin
             return null;
         }
 
-        if (! array_key_exists('url', $data['source']) || (! array_key_exists('reference', $data['source']))) {
+        if (
+            ! array_key_exists('url', $data['source'])
+            || ! array_key_exists('path', $data['source'])
+            || ! array_key_exists('reference', $data['source'])
+        ) {
             return null;
         }
 
@@ -46,7 +50,7 @@ readonly class LockfilePlugin
             return null;
         }
 
-        if (! array_key_exists('url', $data['dist']) || (! array_key_exists('checksum', $data['dist']))) {
+        if (! array_key_exists('url', $data['dist']) || ! array_key_exists('checksum', $data['dist'])) {
             return null;
         }
 
